@@ -46,7 +46,7 @@ public class CharacterManager : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        //바닥이랑 닿았을때 점프 리미트 원래대로
+        //바닥이랑 닿았을때 점프 리미트 원래대로~~
         if (collision.gameObject.tag == "Floor")
         {
             isJump = true;
