@@ -91,12 +91,12 @@ Shader "ProjectMI/Character/Character"
 
                 #if _FACE
 
-                    float3 LightDirection = normalize(light.direction + float3(0.0f, -2.0f, 0.0f));
+                    float3 LightDirection = normalize(light.direction + float3(0.0f, -5.0f, 0.0f));
 
                     float RdotL = dot(normalize(_FaceRightVector.xyz), LightDirection);
                     float FdotL = dot(normalize(_FaceForwardVector.xyz), light.direction);
                     //float FdotLStep = 1-step(0, FdotL);
-                    half ShadowCutValue = 0.065;
+                    half ShadowCutValue = 0.1;
                     FdotL = 1 - FdotL;
                     FdotL = step(ShadowCutValue, FdotL) * FdotL;
                     float FdotLStep = step(FdotL, 1 - ShadowCutValue) * FdotL + (1 - step(FdotL, 1 - ShadowCutValue));
@@ -118,7 +118,7 @@ Shader "ProjectMI/Character/Character"
                     float finalFaceShadow = (FdotLStep * faceShadow);
 
 
-                   // return half4(finalFaceShadow.rrr, 1);
+                   //return half4(finalFaceShadow.rrr, 1);
 
                 #endif
 
