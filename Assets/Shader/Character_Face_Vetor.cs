@@ -25,10 +25,11 @@ public class Character_Face_Vetor : MonoBehaviour
 
     void Update()
     {
-        forwardVector = transform.forward;
+        //forwardVector = transform.forward;
+        forwardVector = new Vector4(0, 0, 1, 0);
         rightVector = transform.right;
 
-        characterMaterial.SetVector("_FaceForwardVector", Vector4(0.0f, 0.0f, 1.0f, 0.0f));
+        characterMaterial.SetVector("_FaceForwardVector", forwardVector);
         characterMaterial.SetVector("_FaceRightVector", rightVector);
     }
 }
