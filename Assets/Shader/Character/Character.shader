@@ -113,8 +113,6 @@ Shader "ProjectMI/Character/Character"
                     
 
                     float faceShadow = step(finalAngle, isRight);
-                    float isBack = (RdotL > 0 && finalAngle > 0) ? 1 : 0;
-
                     float finalFaceShadow = (FdotLStep * faceShadow);
 
 
