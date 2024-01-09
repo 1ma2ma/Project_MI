@@ -4,22 +4,29 @@ Shader "ProjectMI/Character/Character"
     {
         _DiffuseTex             ("Diffuse Texture", 2D) = "white" {}
         _ShadowColorTex         ("Shadow Color Texture", 2D) = "white" {}
+        _ShadowMask             ("Shadow Mask Texture", 2D) = "white" {}
 
         _HairAngelingStrenght   ("Hair Angeling Strenght", Range(0, 1)) = 0.5
 
-        _OutlineWeight          ("Outlune Weight", Range(0, 0.01)) = 0.002
+        _OutlineWeight          ("Outlune Weight", Range(0, 1.0)) = 0.002
 
-        [Toggle(_FACE)] _FACE          ("isFace", Float) = 0
+        [Toggle(_FACE)] _FACE   ("isFace", Float) = 0
         _FaceShadowTex          ("Face Shadow Texture", 2D) = "white" {}
         _FaceForwardVector      ("Face Forward Vector", Vector) = (0, 0, 1, 0)
         _FaceRightVector        ("Face Right Vector", Vector) = (1, 0, 0, 0)
+
+        /////////////////////////////////////////////////////////////////////////////////////////
+
+        _PointLight             ("Point Light Color", Vector) = (0, 0, 0, 1)
     }
     SubShader
     {
+        Name "Character"
         Tags 
         { 
+            "RenderPipeline" = "UniversalPipeline"            
             "RenderType"="Opaque" 
-            "RenderPipeline" = "UniversalPipeline"
+            "UniversalMaterialType" = "Lit"
         }
 
         Pass
@@ -30,6 +37,7 @@ Shader "ProjectMI/Character/Character"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Assets/Shader/HLSL/ToonRamp.hlsl"
 
             #pragma shader_feature _FACE
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
@@ -63,10 +71,13 @@ Shader "ProjectMI/Character/Character"
             TEXTURE2D   (_ShadowColorTex);
             SAMPLER     (sampler_FaceShadowTex);
             TEXTURE2D   (_FaceShadowTex);
+            SAMPLER     (sampler_ShadowMask);
+            TEXTURE2D   (_ShadowMask);
 
             float _HairAngelingStrenght;
             float4 _FaceForwardVector;
             float4 _FaceRightVector;
+            float4 _PointLight;
 
             v2f vert (appdata v)
             {
@@ -84,6 +95,10 @@ Shader "ProjectMI/Character/Character"
             half4 frag (v2f input) : SV_Target
             {
                 Light light = GetMainLight();
+                half3 DirectionLightColor = light.color;
+                half3 PointLightColor = _PointLight.rgb;
+
+                half3 lightColor = DirectionLightColor.rgb /*+ PointLightColor.rgb*/;
 
                 //얼굴 라이팅 연산
                 half4 faceShadowTex_R = SAMPLE_TEXTURE2D(_FaceShadowTex, sampler_FaceShadowTex, float2(input.uv.x, input.uv.y));
@@ -120,11 +135,15 @@ Shader "ProjectMI/Character/Character"
 
                 #endif
 
+                half4 shadowMaskTex = SAMPLE_TEXTURE2D(_ShadowMask, sampler_ShadowMask, input.uv);
+
                 //라이팅 연산
                 float3 N = normalize(input.normalWS.xyz);
                 float3 L = normalize(light.direction);
                 float NdotL = dot(N, L)* 0.5 +  0.5;
                 float SmoothStepNdotL = smoothstep(0.47, 0.48, NdotL); // magic number : 0.47, 0.48 그림자 두단계로
+                      SmoothStepNdotL *= (1-shadowMaskTex.r); //쉐도우 마스크로 원하는 부분에 그림자 고정
+                //return SmoothStepNdotL;
 
                 half4 diffuseTex = SAMPLE_TEXTURE2D(_DiffuseTex, sampler_DiffuseTex, input.uv);
                 half4 shadowColorTex = SAMPLE_TEXTURE2D(_ShadowColorTex, sampler_ShadowColorTex, input.uv);
@@ -141,12 +160,17 @@ Shader "ProjectMI/Character/Character"
                 #if _FACE
                     half3 finalColor = lerp(shadowColorTex.rgb, diffuseTex.rgb + hairAngeling.rrr, finalFaceShadow.r); // 최종 그림자, 빛
                     half4 final = half4(finalColor, 1);
+                    final.rgb *= lightColor;
 
                     return final; // 빨강
                 #else
                 
                     half3 finalColor = lerp(shadowColorTex.rgb, diffuseTex.rgb + hairAngeling.rrr, SmoothStepNdotL.r); // 최종 그림자, 빛
                     half4 final = half4(finalColor, 1);
+                    final.rgb *= lightColor;
+                    
+                    //final = ToonShading_float()
+
 
                     return final; //녹색
                 #endif
