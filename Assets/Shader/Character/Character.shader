@@ -6,6 +6,9 @@ Shader "ProjectMI/Character/Character"
         _ShadowColorTex         ("Shadow Color Texture", 2D) = "white" {}
         _ShadowMask             ("Shadow Mask Texture", 2D) = "white" {}
 
+        [Toggle()]_Matcap       ("isMatcap", Float) = 0
+        _MatcapTex              ("Maptcap Texture", 2D) =   "white" {}
+
         _HairAngelingStrenght   ("Hair Angeling Strenght", Range(0, 1)) = 0.5
 
         _OutlineWeight          ("Outlune Weight", Range(0, 1.0)) = 0.002
@@ -51,7 +54,10 @@ Shader "ProjectMI/Character/Character"
             {
                 float4 positionOS   : POSITION;
                 float3 normalOS     : NORMAL;
-                half4 tangentOS     : TANGENT;
+                
+                float4 tangentOS     : TANGENT;
+
+                float4 color        : COLOR;
                 float2 uv           : TEXCOORD0;
             };
 
@@ -62,12 +68,14 @@ Shader "ProjectMI/Character/Character"
                 float3 positionWS : TEXCOORD1;
                 float3 positionOS : TEXCOORD2;
                 
+                float3 normalOS   : TEXCOORD3;
+                float3 normalWS   : TEXCOORD4;
+                float3 normalVS   : TEXCOORD5;
 
-                float3 normalWS :TEXCOORD3;
+                float2 uv : TEXCOORD6;
 
-                float2 uv : TEXCOORD4;
-
-                float4 positionWSAndFogFactor   : TEXCOORD5;
+                float4 positionWSAndFogFactor   : TEXCOORD7;
+                float4 color : TEXCOORD8;
             };
 
 
@@ -79,6 +87,12 @@ Shader "ProjectMI/Character/Character"
             TEXTURE2D   (_FaceShadowTex);
             SAMPLER     (sampler_ShadowMask);
             TEXTURE2D   (_ShadowMask);
+
+            SAMPLER     (sampler_MatcapTex);
+            TEXTURE2D   (_MatcapTex);
+
+
+            float _Matcap;
 
             float _HairAngelingStrenght;
             float4 _FaceForwardVector;
@@ -99,6 +113,16 @@ Shader "ProjectMI/Character/Character"
                 //output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
                 //output.normalWS = TransformObjectToWorldNormal(input.normalOS.xyz);
                 output.uv = input.uv;
+
+                //노말
+                VertexNormalInputs normalInput = GetVertexNormalInputs(input.normalOS, input.tangentOS);
+                output.normalOS = input.normalOS;
+                output.normalWS = normalInput.normalWS;
+                output.normalVS = mul(output.normalWS, (float3x3) UNITY_MATRIX_I_V);
+                
+
+                output.color = input.color; 
+
 
                 #include "Assets/Shader/HLSL/CustomLighting_Varyings.hlsl"
 
@@ -179,9 +203,9 @@ Shader "ProjectMI/Character/Character"
 
                 #if _FACE
 
-                    half3 finalColor = lerp(shadowColorTex.rgb, diffuseTex.rgb + hairAngeling.rrr, finalFaceShadow.r); // 최종 그림자, 빛
-                    half4 final = half4(finalColor, 1);
-                    final.rgb *= lightColor;
+                    // half3 finalColor = lerp(shadowColorTex.rgb, diffuseTex.rgb + hairAngeling.rrr, finalFaceShadow.r); // 최종 그림자, 빛
+                    // half4 final = half4(finalColor, 1);
+                    // final.rgb *= lightColor;
 
 
                     ToonSurfaceData surfaceData = InitializeSurfaceData(input); 
@@ -191,23 +215,29 @@ Shader "ProjectMI/Character/Character"
                 
 
                 
-                    return final;
+                    // return final;
 
                 #else
                 
                     ToonSurfaceData surfaceData = InitializeSurfaceData(input); 
                     ToonLightingData lightingData = InitializeLightingData(input);
                     half3 color = ShadeAllLights(surfaceData, lightingData, input);
-                    return half4(color, 1);
 
 
+                    // 맵캡
+                    float2 matcapUV = input.normalVS.xy * 0.5 + 0.5;
+                    half4 matcapTex = SAMPLE_TEXTURE2D(_MatcapTex, sampler_MatcapTex, matcapUV);
 
-                    half3 finalColor = lerp(shadowColorTex.rgb, diffuseTex.rgb + hairAngeling.rrr, SmoothStepNdotL.r); // 최종 그림자, 빛
-                    half4 final = half4(finalColor, 1);
-                    final.rgb *= lightColor;
+                    half3 final = _Matcap ? color * matcapTex.rgb : color;
+                    return half4(final, 1);
+
+
+                    // half3 finalColor = lerp(shadowColorTex.rgb, diffuseTex.rgb + hairAngeling.rrr, SmoothStepNdotL.r); // 최종 그림자, 빛
+                    // half4 final = half4(finalColor, 1);
+                    // final.rgb *= lightColor;
                     
 
-                    return final;
+                    // return final;
 
 
                 #endif
