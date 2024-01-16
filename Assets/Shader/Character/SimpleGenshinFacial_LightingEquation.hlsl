@@ -9,6 +9,14 @@
 
 float3x3 AngleAxis3x3(float angle, float3 axis);
 
+
+
+
+
+
+
+
+
 half3 ShadeGI(ToonSurfaceData surfaceData, ToonLightingData lightingData)
 {
     // hide 3D feeling by ignoring all detail SH (leaving only the constant SH term)
@@ -22,6 +30,16 @@ half3 ShadeGI(ToonSurfaceData surfaceData, ToonLightingData lightingData)
     half indirectOcclusion = lerp(1, surfaceData.occlusion, 0.5);
     return averageSH * indirectOcclusion;
 }
+
+
+
+
+
+
+
+
+
+
 
 half3 CalculateFaceShadowMapShading(ToonSurfaceData surfaceData, ToonLightingData lightingData, Light light)
 {
@@ -50,53 +68,105 @@ half3 CalculateFaceShadowMapShading(ToonSurfaceData surfaceData, ToonLightingDat
     return litOrShadow;
 }
 
-// Most important part: lighting equation, edit it according to your needs, write whatever you want here, be creative!
-// This function will be used by all direct lights (directional/point/spot)
-half3 ShadeSingleLight(ToonSurfaceData surfaceData, ToonLightingData lightingData, Light light, bool isAdditionalLight)
-{
-    half3 N = lightingData.normalWS;
-    half3 L = light.direction;
 
-    half NoL = dot(N,L);
 
-    half lightAttenuation = 1;
 
-    // light's distance & angle fade for point light & spot light (see GetAdditionalPerObjectLight(...) in Lighting.hlsl)
-    // Lighting.hlsl -> https://github.com/Unity-Technologies/Graphics/blob/master/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl
-    half distanceAttenuation = min(4,light.distanceAttenuation); //clamp to prevent light over bright if point/spot light too close to vertex
 
-    // N dot L
-    // simplest 1 line cel shade, you can always replace this line by your own method!
-    half litOrShadowArea = smoothstep(_CelShadeMidPoint-_CelShadeSoftness,_CelShadeMidPoint+_CelShadeSoftness, NoL);
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // occlusion
-    litOrShadowArea *= surfaceData.occlusion;
 
-    // face ignore celshade since it is usually very ugly using NoL method
-    litOrShadowArea = _IsFace? lerp(0.5,1,litOrShadowArea) : litOrShadowArea;
 
-    // dynamic face shadow map
-    litOrShadowArea = _UseFaceShadowMap ? CalculateFaceShadowMapShading(surfaceData, lightingData, light) : litOrShadowArea;
 
-    // light's shadow map
-    litOrShadowArea *= lerp(1,light.shadowAttenuation,_ReceiveShadowMappingAmount);
 
-    half combinedShadowArea = litOrShadowArea;
+    // Most important part: lighting equation, edit it according to your needs, write whatever you want here, be creative!
+    // This function will be used by all direct lights (directional/point/spot)
+
+
+    // 가장 중요한 부분: 조명 방정식, 필요에 따라 편집, 원하는 대로 여기에 쓰고, 창의적으로!
+    // 이 기능은 모든 직사등(방향/지점/스팟)에서 사용됩니다
+
+
+
+    half3 ShadeSingleLight(ToonSurfaceData surfaceData, ToonLightingData lightingData, Light light, bool isAdditionalLight)
+    {
+        half3 N = lightingData.normalWS;
+        half3 L = light.direction;
+
+        half NoL = dot(N,L);
+
+        half lightAttenuation = 1;
+
+        // light's distance & angle fade for point light & spot light (see GetAdditionalPerObjectLight(...) in Lighting.hlsl)
+        // Lighting.hlsl -> https://github.com/Unity-Technologies/Graphics/blob/master/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl
+        half distanceAttenuation = min(4,light.distanceAttenuation); //clamp to prevent light over bright if point/spot light too close to vertex
+
+        // N dot L
+        // simplest 1 line cel shade, you can always replace this line by your own method!
+        half litOrShadowArea = smoothstep(_CelShadeMidPoint-_CelShadeSoftness,_CelShadeMidPoint+_CelShadeSoftness, NoL);
+
+        // occlusion
+        litOrShadowArea *= surfaceData.occlusion;
+
+        // face ignore celshade since it is usually very ugly using NoL method
+        litOrShadowArea = _IsFace? lerp(0.5,1,litOrShadowArea) : litOrShadowArea;
+        //return half4(litOrShadowArea.rrr, 1);
+
+
+        // dynamic face shadow map
+        litOrShadowArea = _UseFaceShadowMap ? CalculateFaceShadowMapShading(surfaceData, lightingData, light) : litOrShadowArea;
+        
+
+        // light's shadow map
+        litOrShadowArea *= lerp(1,light.shadowAttenuation,_ReceiveShadowMappingAmount);
+
+        half combinedShadowArea = litOrShadowArea;
     
-    half3 litOrShadowColor = lerp(_ShadowMapColor,1, combinedShadowArea);
+        half3 litOrShadowColor = lerp(_ShadowMapColor,1, combinedShadowArea);
 
-    half3 lightAttenuationRGB = litOrShadowColor * distanceAttenuation;
+        half3 lightAttenuationRGB = litOrShadowColor * distanceAttenuation;
 
-    // saturate() light.color to prevent over bright
-    // additional light reduce intensity since it is additive
-    return saturate(light.color) * lightAttenuationRGB * (isAdditionalLight ? 0.25 : 1);
-}
+        // saturate() light.color to prevent over bright
+        // additional light reduce intensity since it is additive
+        return saturate(light.color) * lightAttenuationRGB * (isAdditionalLight ? 0.25 : 1);
+    }
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
 
 half3 ShadeEmission(ToonSurfaceData surfaceData, ToonLightingData lightingData)
 {
     half3 emissionResult = lerp(surfaceData.emission, surfaceData.emission * surfaceData.albedo, _EmissionMulByBaseColor); // optional mul albedo
     return emissionResult;
 }
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
 
 half3 CompositeAllLightResults(half3 indirectResult, half3 mainLightResult, half3 additionalLightSumResult, half3 emissionResult, ToonSurfaceData surfaceData, ToonLightingData lightingData)
 {
@@ -106,6 +176,26 @@ half3 CompositeAllLightResults(half3 indirectResult, half3 mainLightResult, half
     half3 rawLightSum = max(indirectResult, mainLightResult + additionalLightSumResult); // pick the highest between indirect and direct light
     return surfaceData.albedo * rawLightSum + emissionResult;
 }
+
+
+
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
 
 // Rotation with angle (in radians) and axis
 float3x3 AngleAxis3x3(float angle, float3 axis)

@@ -37,33 +37,39 @@ Shader "ProjectMI/Character/Character"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-            #include "Assets/Shader/HLSL/ToonRamp.hlsl"
+            //#include "Assets/Shader/HLSL/ToonRamp.hlsl"
 
             #pragma shader_feature _FACE
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile_fragment _ _ADDITIONAL_LIGHT_SHADOWS
             #pragma multi_compile_fragment _ _SHADOWS_SOFT
 
             #define PI 3.1415926535897932384626433832795 //pi
 
-            struct appdata
+            struct Attributes
             {
-                float4 positionOS : POSITION;
-                float3 normalOS : NORMAL;
-                float2 uv : TEXCOORD0;
+                float4 positionOS   : POSITION;
+                float3 normalOS     : NORMAL;
+                half4 tangentOS     : TANGENT;
+                float2 uv           : TEXCOORD0;
             };
 
-            struct v2f
+            struct Varyings
             {
                 float4 positionCS : SV_POSITION;
                 float3 positionVS : TEXCOORD0;
                 float3 positionWS : TEXCOORD1;
                 float3 positionOS : TEXCOORD2;
+                
 
                 float3 normalWS :TEXCOORD3;
 
                 float2 uv : TEXCOORD4;
+
+                float4 positionWSAndFogFactor   : TEXCOORD5;
             };
+
 
             SAMPLER     (sampler_DiffuseTex);
             TEXTURE2D   (_DiffuseTex);
@@ -79,20 +85,32 @@ Shader "ProjectMI/Character/Character"
             float4 _FaceRightVector;
             float4 _PointLight;
 
-            v2f vert (appdata v)
+            float3 ToonRampOutput;
+            float3 Direction;
+
+
+
+            Varyings vert (Attributes input)
             {
-                v2f o;
-                o.positionOS = v.positionOS.xyz;
-                o.positionWS = TransformObjectToWorld(v.positionOS.xyz);
-                o.positionVS = TransformWorldToView(o.positionWS.xyz);
-                o.positionCS = TransformObjectToHClip(v.positionOS.xyz);
-                o.normalWS = TransformObjectToWorldNormal(v.normalOS.xyz);
-                o.uv = v.uv;
+                Varyings output;
+                output.positionOS = input.positionOS.xyz;
+                output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                output.positionVS = TransformWorldToView(output.positionWS.xyz);
+                //output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                //output.normalWS = TransformObjectToWorldNormal(input.normalOS.xyz);
+                output.uv = input.uv;
+
+                #include "Assets/Shader/HLSL/CustomLighting_Varyings.hlsl"
+
                 
-                return o;
+                return output;
             }
 
-            half4 frag (v2f input) : SV_Target
+            #include "Assets/Shader/HLSL/CustomLighing_LightingEquation.hlsl"
+            #include "Assets/Shader/HLSL/CustomLighting_Charater.hlsl"
+
+
+            half4 frag (Varyings input) : SV_Target
             {
                 Light light = GetMainLight();
                 half3 DirectionLightColor = light.color;
@@ -103,6 +121,7 @@ Shader "ProjectMI/Character/Character"
                 //얼굴 라이팅 연산
                 half4 faceShadowTex_R = SAMPLE_TEXTURE2D(_FaceShadowTex, sampler_FaceShadowTex, float2(input.uv.x, input.uv.y));
                 half4 faceShadowTex_L = SAMPLE_TEXTURE2D(_FaceShadowTex, sampler_FaceShadowTex, float2(1-input.uv.x, input.uv.y));
+
 
                 #if _FACE
 
@@ -131,11 +150,12 @@ Shader "ProjectMI/Character/Character"
                     float finalFaceShadow = (FdotLStep * faceShadow);
 
 
-                   //return half4(finalFaceShadow.rrr, 1);
-
                 #endif
 
+
                 half4 shadowMaskTex = SAMPLE_TEXTURE2D(_ShadowMask, sampler_ShadowMask, input.uv);
+                // Light light = GetMainLight();
+                // half3 lightColor = light.color;
 
                 //라이팅 연산
                 float3 N = normalize(input.normalWS.xyz);
@@ -158,21 +178,38 @@ Shader "ProjectMI/Character/Character"
 
 
                 #if _FACE
+
                     half3 finalColor = lerp(shadowColorTex.rgb, diffuseTex.rgb + hairAngeling.rrr, finalFaceShadow.r); // 최종 그림자, 빛
                     half4 final = half4(finalColor, 1);
                     final.rgb *= lightColor;
 
-                    return final; // 빨강
+
+                    ToonSurfaceData surfaceData = InitializeSurfaceData(input); 
+                    ToonLightingData lightingData = InitializeLightingData(input);
+                    half3 color = ShadeAllLights(surfaceData, lightingData, input);
+                    return half4(color, 1);
+                
+
+                
+                    return final;
+
                 #else
                 
+                    ToonSurfaceData surfaceData = InitializeSurfaceData(input); 
+                    ToonLightingData lightingData = InitializeLightingData(input);
+                    half3 color = ShadeAllLights(surfaceData, lightingData, input);
+                    return half4(color, 1);
+
+
+
                     half3 finalColor = lerp(shadowColorTex.rgb, diffuseTex.rgb + hairAngeling.rrr, SmoothStepNdotL.r); // 최종 그림자, 빛
                     half4 final = half4(finalColor, 1);
                     final.rgb *= lightColor;
                     
-                    //final = ToonShading_float()
+
+                    return final;
 
 
-                    return final; //녹색
                 #endif
             }
             ENDHLSL

@@ -24,7 +24,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: f4b6dd8322133094b8c0c292034524a0, type: 3}
+        m_Texture: {fileID: 2800000, guid: 5cb78840a4ef7514b801a25f754c79fd, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _EmissionMap:
@@ -32,7 +32,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _FaceShadowMap:
-        m_Texture: {fileID: 2800000, guid: 186e9cb8780e72949811c06c5694a6e2, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _OcclusionMap:
@@ -48,13 +48,13 @@ Material:
     - _AdditionalLightIgnoreCelShade: 0.9
     - _CelShadeMidPoint: -0.5
     - _CelShadeSoftness: 0.05
-    - _Cutoff: 0.5
+    - _Cutoff: 0.39
     - _DirectLightMultiplier: 1
     - _EmissionMulByBaseColor: 0
     - _FaceDirectionOffset: 0
     - _FlipFaceDirection: 1
     - _IndirectLightMultiplier: 1
-    - _IsFace: 1
+    - _IsFace: 0
     - _MainLightIgnoreCelShade: 0
     - _OcclusionRemapEnd: 1
     - _OcclusionRemapStart: 0
