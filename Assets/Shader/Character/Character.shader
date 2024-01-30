@@ -2,6 +2,7 @@ Shader "ProjectMI/Character/Character"
 {
     Properties
     {
+        _BaseColor              ("Base Color", Color) = (1, 1, 1, 1)
         _DiffuseTex             ("Diffuse Texture", 2D) = "white" {}
         _ShadowColorTex         ("Shadow Color Texture", 2D) = "white" {}
         _ShadowMask             ("Shadow Mask Texture", 2D) = "white" {}
@@ -98,6 +99,7 @@ Shader "ProjectMI/Character/Character"
             float4 _FaceForwardVector;
             float4 _FaceRightVector;
             float4 _PointLight;
+            float4 _BaseColor;
 
             float3 ToonRampOutput;
             float3 Direction;
@@ -210,7 +212,7 @@ Shader "ProjectMI/Character/Character"
 
                     ToonSurfaceData surfaceData = InitializeSurfaceData(input); 
                     ToonLightingData lightingData = InitializeLightingData(input);
-                    half3 color = ShadeAllLights(surfaceData, lightingData, input);
+                    half3 color = ShadeAllLights(surfaceData, lightingData, input) * _BaseColor;
                     return half4(color, 1);
                 
 
@@ -229,7 +231,7 @@ Shader "ProjectMI/Character/Character"
                     half4 matcapTex = SAMPLE_TEXTURE2D(_MatcapTex, sampler_MatcapTex, matcapUV);
 
                     half3 final = _Matcap ? color * matcapTex.rgb : color;
-                    return half4(final, 1);
+                    return half4(final * _BaseColor, 1);
 
 
                     // half3 finalColor = lerp(shadowColorTex.rgb, diffuseTex.rgb + hairAngeling.rrr, SmoothStepNdotL.r); // 최종 그림자, 빛
